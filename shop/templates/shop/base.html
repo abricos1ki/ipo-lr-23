@@ -5,7 +5,7 @@
     <title>{% block title %}Интернет-магазин товаров для йоги{% endblock %}</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 0 auto; max-width: 900px; padding: 20px; color: #222; }
-        header { border-bottom: 2px solid #4a7c59; padding-bottom: 10px; margin-bottom: 20px; }
+        header { border-bottom: 2px solid #4a7c59; padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; flex-wrap: wrap; }
         header a { margin-right: 15px; color: #4a7c59; text-decoration: none; font-weight: bold; }
         header a:hover { text-decoration: underline; }
         .product-card { border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-bottom: 15px; }
@@ -15,25 +15,53 @@
         .meta { color: #666; font-size: 0.9em; }
         form.filters { margin-bottom: 20px; padding: 15px; background: #f7f7f4; border-radius: 8px; }
         form.filters select, form.filters input { margin-right: 10px; padding: 5px; }
+        .add-to-cart-form { margin-top: 10px; }
         .pagination { margin-top: 20px; }
         .pagination a, .pagination span { margin-right: 10px; }
+        .messages { list-style: none; padding: 0; margin-bottom: 20px; }
+        .messages li { padding: 10px; border-radius: 6px; margin-bottom: 8px; }
+        .messages .success { background: #e3f3e6; color: #1f5e2c; border: 1px solid #b6dcc0; }
+        .messages .error { background: #fdecea; color: #8a1f11; border: 1px solid #f3c0ba; }
+        table { border-collapse: collapse; width: 100%; }
         footer { margin-top: 40px; border-top: 1px solid #ddd; padding-top: 10px; color: #999; font-size: 0.85em; }
     </style>
 </head>
 <body>
     <header>
-        <a href="{% url 'shop:home' %}">Главная</a>
-        <a href="{% url 'shop:product_list' %}">Каталог товаров</a>
-        <a href="{% url 'shop:about_shop' %}">О магазине</a>
-        <a href="{% url 'shop:about_author' %}">Об авторе</a>
+        <div>
+            <a href="{% url 'shop:home' %}">Главная</a>
+            <a href="{% url 'shop:catalog' %}">Каталог товаров</a>
+            <a href="{% url 'shop:about_shop' %}">О магазине</a>
+            <a href="{% url 'shop:about_author' %}">Об авторе</a>
+        </div>
+        <div>
+            {% if user.is_authenticated %}
+                <a href="{% url 'shop:cart_view' %}">Корзина</a>
+                <span class="meta">{{ user.username }}</span>
+                <form method="post" action="{% url 'logout' %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" style="background: none; border: none; color: #4a7c59; font-weight: bold; cursor: pointer; padding: 0;">Выйти</button>
+                </form>
+            {% else %}
+                <a href="{% url 'login' %}?next={{ request.path }}">Войти</a>
+            {% endif %}
+        </div>
     </header>
+
+    {% if messages %}
+        <ul class="messages">
+            {% for message in messages %}
+                <li class="{{ message.tags }}">{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
 
     <main>
         {% block content %}{% endblock %}
     </main>
 
     <footer>
-        Учебный проект. Лабораторная работа №17 "Работа с Django ORM". Вариант 22.
+        Учебный проект. Лабораторная работа №18 "Реализация CRUD-операций с Django ORM". Вариант 22.
     </footer>
 </body>
 </html>

@@ -1,0 +1,50 @@
+{% extends "shop/base.html" %}
+
+{% block title %}Корзина — Интернет-магазин товаров для йоги{% endblock %}
+
+{% block content %}
+    <h1>Корзина</h1>
+
+    {% if items %}
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="text-align: left; border-bottom: 2px solid #4a7c59;">
+                    <th style="padding: 8px;">Товар</th>
+                    <th style="padding: 8px;">Цена за шт.</th>
+                    <th style="padding: 8px;">Количество</th>
+                    <th style="padding: 8px;">Стоимость</th>
+                    <th style="padding: 8px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 8px;">
+                            <a href="{% url 'shop:catalog_detail' item.product.pk %}">{{ item.product.name }}</a>
+                        </td>
+                        <td style="padding: 8px;">{{ item.product.price }} BYN</td>
+                        <td style="padding: 8px;">
+                            <form method="post" action="{% url 'shop:update_cart' item.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <input type="number" name="quantity" value="{{ item.quantity }}" min="1" max="{{ item.product.stock_quantity }}" style="width: 60px;">
+                                <button type="submit">Обновить</button>
+                            </form>
+                        </td>
+                        <td style="padding: 8px;">{{ item.item_cost }} BYN</td>
+                        <td style="padding: 8px;">
+                            <form method="post" action="{% url 'shop:remove_from_cart' item.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit">Удалить</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <h2>Общая стоимость: {{ total_cost }} BYN</h2>
+    {% else %}
+        <p>Ваша корзина пуста.</p>
+        <p><a href="{% url 'shop:catalog' %}">Перейти в каталог товаров</a></p>
+    {% endif %}
+{% endblock %}

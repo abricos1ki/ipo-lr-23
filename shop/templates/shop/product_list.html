@@ -39,13 +39,25 @@
     {% if page_obj %}
         {% for product in page_obj %}
             <div class="product-card">
-                <h3><a href="{% url 'shop:product_detail' product.pk %}">{{ product.name }}</a></h3>
+                <h3><a href="{% url 'shop:catalog_detail' product.pk %}">{{ product.name }}</a></h3>
                 <p class="meta">
                     Категория: {{ product.category.name }} |
                     Производитель: {{ product.manufacturer.name }} |
                     На складе: {{ product.stock_quantity }} шт.
                 </p>
                 <p class="price">{{ product.price }} BYN</p>
+
+                {% if user.is_authenticated %}
+                    <form method="post" action="{% url 'shop:add_to_cart' product.pk %}" class="add-to-cart-form">
+                        {% csrf_token %}
+                        <input type="number" name="quantity" value="1" min="1" max="{{ product.stock_quantity }}" {% if product.stock_quantity == 0 %}disabled{% endif %}>
+                        <button type="submit" {% if product.stock_quantity == 0 %}disabled{% endif %}>
+                            {% if product.stock_quantity == 0 %}Нет в наличии{% else %}Добавить в корзину{% endif %}
+                        </button>
+                    </form>
+                {% else %}
+                    <p class="meta"><a href="{% url 'login' %}?next={{ request.path }}">Войдите</a>, чтобы добавить товар в корзину.</p>
+                {% endif %}
             </div>
         {% endfor %}
 

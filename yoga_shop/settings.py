@@ -128,3 +128,9 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Authentication (лабораторная работа №18)
+# https://docs.djangoproject.com/en/5.1/topics/auth/default/
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'shop:cart_view'
+LOGOUT_REDIRECT_URL = 'shop:home'

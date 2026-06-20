@@ -1,9 +1,12 @@
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import HttpResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
 
-from .models import Category, Manufacturer, Product
+from .models import Cart, CartItem, Category, Manufacturer, Product
 
 
 def home(request):
@@ -18,7 +21,8 @@ def home(request):
         "Доступные страницы:\n"
         "  - /about-author/  -- информация об авторе лабораторной работы\n"
         "  - /about-shop/    -- информация о магазине\n"
-        "  - /products/      -- список товаров (фильтрация, поиск, сортировка)\n"
+        "  - /catalog/       -- каталог товаров (фильтрация, поиск, сортировка)\n"
+        "  - /cart/          -- корзина пользователя (требуется вход в систему)\n"
     )
     return HttpResponse(text, content_type="text/plain; charset=utf-8")
 
@@ -127,3 +131,113 @@ def product_detail(request, pk):
         Product.objects.select_related("category", "manufacturer"), pk=pk
     )
     return render(request, "shop/product_detail.html", {"product": product})
+
+
+def _get_or_create_cart(user):
+    """Вспомогательная функция: получить (или создать) корзину пользователя."""
+    cart, _ = Cart.objects.get_or_create(user=user)
+    return cart
+
+
+@login_required
+@require_POST
+def add_to_cart(request, product_id):
+    """
+    Добавление товара в корзину (лабораторная работа №18).
+    Доступно только аутентифицированным пользователям (@login_required).
+    Если товар уже есть в корзине -- увеличивает количество,
+    иначе создаёт новый CartItem.
+    """
+    product = get_object_or_404(Product, pk=product_id)
+    cart = _get_or_create_cart(request.user)
+
+    try:
+        quantity_to_add = int(request.POST.get("quantity", 1))
+    except (TypeError, ValueError):
+        quantity_to_add = 1
+    quantity_to_add = max(1, quantity_to_add)
+
+    cart_item, created = CartItem.objects.get_or_create(
+        cart=cart, product=product, defaults={"quantity": 0}
+    )
+    new_quantity = cart_item.quantity + quantity_to_add
+
+    if new_quantity > product.stock_quantity:
+        messages.error(
+            request,
+            f"Нельзя добавить {quantity_to_add} шт. товара \"{product.name}\": "
+            f"на складе доступно только {product.stock_quantity} шт. "
+            f"(в корзине уже {cart_item.quantity} шт.).",
+        )
+        if created:
+            cart_item.delete()
+        return redirect("shop:product_detail", pk=product_id)
+
+    cart_item.quantity = new_quantity
+    cart_item.save()
+    messages.success(request, f"Товар \"{product.name}\" добавлен в корзину.")
+    return redirect("shop:cart_view")
+
+
+@login_required
+@require_POST
+def update_cart(request, item_id):
+    """
+    Обновление количества товара в корзине (лабораторная работа №18).
+    Валидация: количество не должно превышать остаток на складе.
+    """
+    cart_item = get_object_or_404(CartItem, pk=item_id, cart__user=request.user)
+
+    try:
+        new_quantity = int(request.POST.get("quantity"))
+    except (TypeError, ValueError):
+        messages.error(request, "Некорректное значение количества.")
+        return redirect("shop:cart_view")
+
+    if new_quantity < 1:
+        messages.error(request, "Количество должно быть не менее 1.")
+        return redirect("shop:cart_view")
+
+    if new_quantity > cart_item.product.stock_quantity:
+        messages.error(
+            request,
+            f"Количество не может превышать остаток на складе "
+            f"({cart_item.product.stock_quantity} шт.).",
+        )
+        return redirect("shop:cart_view")
+
+    cart_item.quantity = new_quantity
+    cart_item.save()
+    messages.success(request, f"Количество товара \"{cart_item.product.name}\" обновлено.")
+    return redirect("shop:cart_view")
+
+
+@login_required
+@require_POST
+def remove_from_cart(request, item_id):
+    """
+    Удаление товара из корзины (лабораторная работа №18).
+    """
+    cart_item = get_object_or_404(CartItem, pk=item_id, cart__user=request.user)
+    product_name = cart_item.product.name
+    cart_item.delete()
+    messages.success(request, f"Товар \"{product_name}\" удалён из корзины.")
+    return redirect("shop:cart_view")
+
+
+@login_required
+def cart_view(request):
+    """
+    Просмотр корзины пользователя (лабораторная работа №18).
+    Отображает все элементы корзины с общей стоимостью.
+    Доступно только аутентифицированным пользователям (@login_required).
+    """
+    cart = _get_or_create_cart(request.user)
+    items = cart.items.select_related("product").all()
+
+    context = {
+        "cart": cart,
+        "items": items,
+        "total_cost": cart.total_cost(),
+    }
+    return render(request, "shop/cart.html", context)

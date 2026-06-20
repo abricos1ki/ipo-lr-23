@@ -3,7 +3,7 @@
 {% block title %}{{ product.name }} — Интернет-магазин товаров для йоги{% endblock %}
 
 {% block content %}
-    <p><a href="{% url 'shop:product_list' %}">&laquo; Назад в каталог</a></p>
+    <p><a href="{% url 'shop:catalog' %}">&laquo; Назад в каталог</a></p>
 
     <h1>{{ product.name }}</h1>
 
@@ -20,4 +20,17 @@
         <tr><td><strong>Производитель:</strong></td><td>{{ product.manufacturer.name }} ({{ product.manufacturer.country }})</td></tr>
         <tr><td><strong>На складе:</strong></td><td>{{ product.stock_quantity }} шт.</td></tr>
     </table>
+
+    {% if user.is_authenticated %}
+        <form method="post" action="{% url 'shop:add_to_cart' product.pk %}" class="add-to-cart-form">
+            {% csrf_token %}
+            <label for="quantity">Количество:</label>
+            <input type="number" id="quantity" name="quantity" value="1" min="1" max="{{ product.stock_quantity }}" {% if product.stock_quantity == 0 %}disabled{% endif %}>
+            <button type="submit" {% if product.stock_quantity == 0 %}disabled{% endif %}>
+                {% if product.stock_quantity == 0 %}Нет в наличии{% else %}Добавить в корзину{% endif %}
+            </button>
+        </form>
+    {% else %}
+        <p><a href="{% url 'login' %}?next={{ request.path }}">Войдите</a>, чтобы добавить товар в корзину.</p>
+    {% endif %}
 {% endblock %}

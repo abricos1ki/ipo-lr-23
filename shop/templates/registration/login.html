@@ -1,0 +1,31 @@
+{% extends "shop/base.html" %}
+
+{% block title %}Вход — Интернет-магазин товаров для йоги{% endblock %}
+
+{% block content %}
+    <h1>Вход в систему</h1>
+
+    <form method="post">
+        {% csrf_token %}
+        {% if form.errors %}
+            <p style="color: #8a1f11;">Неверное имя пользователя или пароль. Попробуйте снова.</p>
+        {% endif %}
+
+        <p>
+            <label for="id_username">Имя пользователя:</label><br>
+            {{ form.username }}
+        </p>
+        <p>
+            <label for="id_password">Пароль:</label><br>
+            {{ form.password }}
+        </p>
+
+        <input type="hidden" name="next" value="{{ next }}">
+        <button type="submit">Войти</button>
+    </form>
+
+    <p class="meta">
+        Тестовые пользователи (созданы командой <code>seed_data</code>):
+        anna, ivan, olga, dmitry, maria — пароль <code>password123</code>.
+    </p>
+{% endblock %}
