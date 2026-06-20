@@ -134,3 +134,30 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'shop:cart_view'
 LOGOUT_REDIRECT_URL = 'shop:home'
+
+# Email (лабораторная работа №19)
+# https://docs.djangoproject.com/en/5.1/topics/email/
+#
+# Параметры SMTP-сервера задаются через переменные окружения, чтобы не
+# хранить логин/пароль от почты прямо в коде. Пример для Yandex Mail:
+#   EMAIL_HOST_USER=your_login@yandex.ru
+#   EMAIL_HOST_PASSWORD=пароль_приложения  (создаётся в настройках Яндекс ID)
+#
+# Если переменные окружения не заданы, письма не отправляются по сети,
+# а выводятся в консоль сервера разработки (EMAIL_BACKEND = console) --
+# это удобно для проверки работы функционала без реального SMTP-сервера.
+import os
+
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+
+if EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = 'smtp.yandex.ru'
+    EMAIL_PORT = 465
+    EMAIL_USE_SSL = True
+    EMAIL_USE_TLS = False
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER or 'yoga-shop@example.com'

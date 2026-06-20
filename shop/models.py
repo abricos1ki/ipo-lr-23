@@ -153,3 +153,68 @@ class CartItem(models.Model):
                         )
                     }
                 )
+
+
+class Order(models.Model):
+    """
+    Модель "Заказ" (лабораторная работа №19).
+    Создаётся на основе содержимого корзины при оформлении заказа.
+    """
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        verbose_name="пользователь",
+        on_delete=models.CASCADE,
+        related_name="orders",
+    )
+    delivery_address = models.CharField("адрес доставки", max_length=255)
+    comment = models.TextField("комментарий к заказу", blank=True)
+    created_at = models.DateTimeField("дата оформления", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Заказ"
+        verbose_name_plural = "Заказы"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Заказ №{self.pk} ({self.user.username})"
+
+    def total_cost(self):
+        """Считает суммарную стоимость всех позиций заказа."""
+        return sum(item.item_cost() for item in self.items.all())
+
+
+class OrderItem(models.Model):
+    """
+    Модель "Позиция заказа".
+    Хранит снимок цены товара на момент оформления заказа,
+    чтобы итоговая сумма не менялась при последующем изменении цены товара.
+    """
+
+    order = models.ForeignKey(
+        Order,
+        verbose_name="заказ",
+        on_delete=models.CASCADE,
+        related_name="items",
+    )
+    product = models.ForeignKey(
+        Product,
+        verbose_name="товар",
+        on_delete=models.CASCADE,
+        related_name="order_items",
+    )
+    quantity = models.PositiveIntegerField("количество")
+    price = models.DecimalField(
+        "цена на момент заказа", max_digits=10, decimal_places=2
+    )
+
+    class Meta:
+        verbose_name = "Позиция заказа"
+        verbose_name_plural = "Позиции заказа"
+
+    def __str__(self):
+        return f"{self.product.name} ({self.quantity} шт.)"
+
+    def item_cost(self):
+        """Возвращает стоимость позиции заказа (цена на момент заказа * количество)."""
+        return self.price * self.quantity

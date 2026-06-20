@@ -43,6 +43,8 @@
         </table>
 
         <h2>Общая стоимость: {{ total_cost }} BYN</h2>
+
+        <p><a href="{% url 'shop:checkout' %}"><button type="button">Оформить заказ</button></a></p>
     {% else %}
         <p>Ваша корзина пуста.</p>
         <p><a href="{% url 'shop:catalog' %}">Перейти в каталог товаров</a></p>

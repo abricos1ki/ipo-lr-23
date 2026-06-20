@@ -1,12 +1,17 @@
+from decimal import Decimal
+
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.core.mail import EmailMessage
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from .models import Cart, CartItem, Category, Manufacturer, Product
+from .models import Cart, CartItem, Category, Manufacturer, Order, OrderItem, Product
+from .receipts import build_order_receipt
 
 
 def home(request):
@@ -241,3 +246,120 @@ def cart_view(request):
         "total_cost": cart.total_cost(),
     }
     return render(request, "shop/cart.html", context)
+
+
+@login_required
+def checkout(request):
+    """
+    Оформление заказа (лабораторная работа №19).
+    Доступно только аутентифицированным пользователям (@login_required).
+
+    GET  -- отображает форму с адресом доставки и комментарием.
+    POST -- создаёт заказ на основе содержимого корзины, генерирует чек
+            в формате Excel, отправляет его на email пользователя
+            и очищает корзину.
+    """
+    cart = _get_or_create_cart(request.user)
+    items = list(cart.items.select_related("product").all())
+
+    if request.method == "POST":
+        delivery_address = request.POST.get("delivery_address", "").strip()
+        comment = request.POST.get("comment", "").strip()
+
+        if not items:
+            messages.error(request, "Корзина пуста -- оформить заказ невозможно.")
+            return redirect("shop:cart_view")
+
+        if not delivery_address:
+            messages.error(request, "Укажите адрес доставки.")
+            return render(
+                request,
+                "shop/checkout.html",
+                {"items": items, "total_cost": cart.total_cost()},
+            )
+
+        if not request.user.email:
+            messages.error(
+                request,
+                "У вашего аккаунта не указан email -- невозможно отправить чек. "
+                "Заполните email в профиле и повторите попытку.",
+            )
+            return render(
+                request,
+                "shop/checkout.html",
+                {"items": items, "total_cost": cart.total_cost()},
+            )
+
+        # Дополнительная проверка остатков перед оформлением заказа
+        for item in items:
+            if item.quantity > item.product.stock_quantity:
+                messages.error(
+                    request,
+                    f"Товара \"{item.product.name}\" недостаточно на складе "
+                    f"(в наличии {item.product.stock_quantity} шт., в корзине {item.quantity} шт.). "
+                    "Обновите корзину перед оформлением заказа.",
+                )
+                return redirect("shop:cart_view")
+
+        try:
+            with transaction.atomic():
+                order = Order.objects.create(
+                    user=request.user,
+                    delivery_address=delivery_address,
+                    comment=comment,
+                )
+                for item in items:
+                    OrderItem.objects.create(
+                        order=order,
+                        product=item.product,
+                        quantity=item.quantity,
+                        price=item.product.price,
+                    )
+                    # Списываем товар со склада
+                    item.product.stock_quantity -= item.quantity
+                    item.product.save()
+
+                # Очищаем корзину после успешного оформления заказа
+                cart.items.all().delete()
+
+            # Генерация чека в формате Excel
+            receipt_buffer = build_order_receipt(order)
+
+            # Отправка чека по электронной почте
+            email = EmailMessage(
+                subject=f"Чек по заказу №{order.pk} -- Интернет-магазин товаров для йоги",
+                body=(
+                    f"Здравствуйте, {request.user.username}!\n\n"
+                    f"Спасибо за заказ №{order.pk} в интернет-магазине товаров для йоги.\n"
+                    f"Адрес доставки: {order.delivery_address}\n"
+                    f"Итоговая сумма: {order.total_cost()} BYN\n\n"
+                    "Чек по заказу во вложении."
+                ),
+                to=[request.user.email],
+            )
+            email.attach(
+                f"receipt_order_{order.pk}.xlsx",
+                receipt_buffer.read(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+            email.send(fail_silently=False)
+
+            messages.success(
+                request,
+                f"Заказ №{order.pk} успешно оформлен! Чек отправлен на {request.user.email}.",
+            )
+            return redirect("shop:home")
+
+        except Exception as exc:
+            messages.error(
+                request,
+                f"Не удалось завершить оформление заказа: {exc}",
+            )
+            return redirect("shop:cart_view")
+
+    # GET-запрос: показываем форму оформления заказа
+    context = {
+        "items": items,
+        "total_cost": cart.total_cost(),
+    }
+    return render(request, "shop/checkout.html", context)

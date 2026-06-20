@@ -1,0 +1,52 @@
+{% extends "shop/base.html" %}
+
+{% block title %}Оформление заказа — Интернет-магазин товаров для йоги{% endblock %}
+
+{% block content %}
+    <h1>Оформление заказа</h1>
+
+    {% if items %}
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+            <thead>
+                <tr style="text-align: left; border-bottom: 2px solid #4a7c59;">
+                    <th style="padding: 8px;">Товар</th>
+                    <th style="padding: 8px;">Цена за шт.</th>
+                    <th style="padding: 8px;">Количество</th>
+                    <th style="padding: 8px;">Стоимость</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                    <tr style="border-bottom: 1px solid #eee;">
+                        <td style="padding: 8px;">{{ item.product.name }}</td>
+                        <td style="padding: 8px;">{{ item.product.price }} BYN</td>
+                        <td style="padding: 8px;">{{ item.quantity }}</td>
+                        <td style="padding: 8px;">{{ item.item_cost }} BYN</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <h2>Итого к оплате: {{ total_cost }} BYN</h2>
+
+        <form method="post">
+            {% csrf_token %}
+            <p>
+                <label for="id_delivery_address"><strong>Адрес доставки:</strong></label><br>
+                <input type="text" id="id_delivery_address" name="delivery_address" placeholder="Например: г. Минск, ул. Примерная, д. 1, кв. 1" style="width: 100%; max-width: 500px; padding: 8px;" required>
+            </p>
+            <p>
+                <label for="id_comment"><strong>Комментарий к заказу (необязательно):</strong></label><br>
+                <textarea id="id_comment" name="comment" rows="3" style="width: 100%; max-width: 500px; padding: 8px;" placeholder="Пожелания к доставке, удобное время и т.п."></textarea>
+            </p>
+            <p class="meta">
+                После оформления заказа чек в формате Excel будет отправлен на
+                адрес электронной почты вашего аккаунта ({{ user.email|default:"email не указан" }}).
+            </p>
+            <button type="submit">Подтвердить заказ</button>
+        </form>
+    {% else %}
+        <p>Ваша корзина пуста. Сначала добавьте товары в корзину.</p>
+        <p><a href="{% url 'shop:catalog' %}">Перейти в каталог товаров</a></p>
+    {% endif %}
+{% endblock %}
