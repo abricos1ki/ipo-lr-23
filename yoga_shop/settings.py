@@ -121,6 +121,14 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# Дополнительные директории со статическими файлами проекта (лр21)
+STATICFILES_DIRS = [
+    BASE_DIR / 'static',
+]
+
+# Директория для сбора статики при деплое (python manage.py collectstatic)
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
 # Media files (изображения товаров, загружаемые пользователями)
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'

@@ -1,0 +1,50 @@
+{% extends "shop/base.html" %}
+
+{% block title %}Pranava — интернет-магазин товаров для йоги{% endblock %}
+
+{% block content %}
+    <section class="hero-section text-center mb-5">
+        <div class="container">
+            <h1 class="display-heading fw-bold mb-3">Pranava — пространство для вашей практики</h1>
+            <p class="lead mx-auto" style="max-width: 600px;">
+                Коврики, блоки, ремни и аксессуары для йоги — от бережной растяжки
+                по утрам до глубокой вечерней медитации. Подобрано с заботой о теле и дыхании.
+            </p>
+            <a href="{% url 'shop:catalog' %}" class="btn btn-brand btn-lg mt-2">Перейти в каталог</a>
+        </div>
+    </section>
+
+    <section class="mb-5">
+        <h2 class="mb-4">Популярные товары</h2>
+        <div class="row">
+            {% for product in popular_products %}
+                <div class="col-sm-6 col-md-4 mb-4">
+                    <div class="card product-card h-100">
+                        {% if product.photo %}
+                            <img src="{{ product.photo.url }}" class="card-img-top" alt="{{ product.name }}">
+                        {% else %}
+                            <div class="product-card-img-placeholder">Фото скоро появится</div>
+                        {% endif %}
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title">{{ product.name }}</h5>
+                            <p class="card-text text-muted small mb-1">{{ product.category.name }}</p>
+                            <p class="price-tag mb-2">{{ product.price }} BYN</p>
+                            <a href="{% url 'shop:catalog_detail' product.pk %}" class="btn btn-outline-brand btn-sm mt-auto">Подробнее</a>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <p class="text-muted">Товары пока не добавлены.</p>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="mb-3">
+        <h2 class="mb-3">Категории</h2>
+        <div>
+            {% for category in categories %}
+                <a class="category-pill" href="{% url 'shop:catalog' %}?category={{ category.id }}">{{ category.name }}</a>
+            {% endfor %}
+        </div>
+    </section>
+{% endblock %}

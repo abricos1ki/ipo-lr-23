@@ -1,36 +1,57 @@
 {% extends "shop/base.html" %}
 
-{% block title %}{{ product.name }} — Интернет-магазин товаров для йоги{% endblock %}
+{% block title %}{{ product.name }} — Pranava{% endblock %}
 
 {% block content %}
-    <p><a href="{% url 'shop:catalog' %}">&laquo; Назад в каталог</a></p>
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'shop:home' %}">Главная</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'shop:catalog' %}">Каталог</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ product.name }}</li>
+        </ol>
+    </nav>
 
-    <h1>{{ product.name }}</h1>
+    <div class="row g-4">
+        <div class="col-md-6">
+            {% if product.photo %}
+                <img src="{{ product.photo.url }}" alt="{{ product.name }}" class="product-detail-photo">
+            {% else %}
+                <div class="product-detail-photo-placeholder">Фото скоро появится</div>
+            {% endif %}
+        </div>
 
-    {% if product.photo %}
-        <img src="{{ product.photo.url }}" alt="{{ product.name }}" style="max-width: 300px; border-radius: 8px;">
-    {% endif %}
+        <div class="col-md-6">
+            <h1 class="mb-2">{{ product.name }}</h1>
+            <p class="text-muted mb-3">
+                Производитель: <strong>{{ product.manufacturer.name }}</strong> ({{ product.manufacturer.country }}) ·
+                Категория: <a href="{% url 'shop:catalog' %}?category={{ product.category.id }}">{{ product.category.name }}</a>
+            </p>
 
-    <p class="price">{{ product.price }} BYN</p>
+            <p class="price-tag fs-3 mb-3">{{ product.price }} BYN</p>
 
-    <p>{{ product.description }}</p>
+            <p class="mb-3">{{ product.description }}</p>
 
-    <table>
-        <tr><td><strong>Категория:</strong></td><td>{{ product.category.name }}</td></tr>
-        <tr><td><strong>Производитель:</strong></td><td>{{ product.manufacturer.name }} ({{ product.manufacturer.country }})</td></tr>
-        <tr><td><strong>На складе:</strong></td><td>{{ product.stock_quantity }} шт.</td></tr>
-    </table>
+            <p class="mb-4">
+                {% if product.stock_quantity > 0 %}
+                    <span class="badge stock-badge in-stock">В наличии: {{ product.stock_quantity }} шт.</span>
+                {% else %}
+                    <span class="badge stock-badge out-of-stock">Нет в наличии</span>
+                {% endif %}
+            </p>
 
-    {% if user.is_authenticated %}
-        <form method="post" action="{% url 'shop:add_to_cart' product.pk %}" class="add-to-cart-form">
-            {% csrf_token %}
-            <label for="quantity">Количество:</label>
-            <input type="number" id="quantity" name="quantity" value="1" min="1" max="{{ product.stock_quantity }}" {% if product.stock_quantity == 0 %}disabled{% endif %}>
-            <button type="submit" {% if product.stock_quantity == 0 %}disabled{% endif %}>
-                {% if product.stock_quantity == 0 %}Нет в наличии{% else %}Добавить в корзину{% endif %}
-            </button>
-        </form>
-    {% else %}
-        <p><a href="{% url 'login' %}?next={{ request.path }}">Войдите</a>, чтобы добавить товар в корзину.</p>
-    {% endif %}
+            {% if user.is_authenticated %}
+                <form method="post" action="{% url 'shop:add_to_cart' product.pk %}" class="d-flex align-items-center gap-2">
+                    {% csrf_token %}
+                    <input type="number" name="quantity" value="1" min="1" max="{{ product.stock_quantity }}" class="form-control" style="max-width: 100px;" {% if product.stock_quantity == 0 %}disabled{% endif %}>
+                    <button type="submit" class="btn btn-brand btn-lg" {% if product.stock_quantity == 0 %}disabled{% endif %}>
+                        {% if product.stock_quantity == 0 %}Нет в наличии{% else %}Добавить в корзину{% endif %}
+                    </button>
+                </form>
+            {% else %}
+                <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-brand btn-lg">Войдите, чтобы добавить в корзину</a>
+            {% endif %}
+
+            <p class="mt-4"><a href="{% url 'shop:catalog' %}">&laquo; Назад в каталог</a></p>
+        </div>
+    </div>
 {% endblock %}

@@ -1,52 +1,62 @@
 {% extends "shop/base.html" %}
 
-{% block title %}Корзина — Интернет-магазин товаров для йоги{% endblock %}
+{% block title %}Корзина — Pranava{% endblock %}
 
 {% block content %}
-    <h1>Корзина</h1>
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'shop:home' %}">Главная</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Корзина</li>
+        </ol>
+    </nav>
+
+    <h1 class="mb-4">Корзина</h1>
 
     {% if items %}
-        <table style="width: 100%; border-collapse: collapse;">
-            <thead>
-                <tr style="text-align: left; border-bottom: 2px solid #4a7c59;">
-                    <th style="padding: 8px;">Товар</th>
-                    <th style="padding: 8px;">Цена за шт.</th>
-                    <th style="padding: 8px;">Количество</th>
-                    <th style="padding: 8px;">Стоимость</th>
-                    <th style="padding: 8px;"></th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in items %}
-                    <tr style="border-bottom: 1px solid #eee;">
-                        <td style="padding: 8px;">
-                            <a href="{% url 'shop:catalog_detail' item.product.pk %}">{{ item.product.name }}</a>
-                        </td>
-                        <td style="padding: 8px;">{{ item.product.price }} BYN</td>
-                        <td style="padding: 8px;">
-                            <form method="post" action="{% url 'shop:update_cart' item.id %}" style="display: inline;">
-                                {% csrf_token %}
-                                <input type="number" name="quantity" value="{{ item.quantity }}" min="1" max="{{ item.product.stock_quantity }}" style="width: 60px;">
-                                <button type="submit">Обновить</button>
-                            </form>
-                        </td>
-                        <td style="padding: 8px;">{{ item.item_cost }} BYN</td>
-                        <td style="padding: 8px;">
-                            <form method="post" action="{% url 'shop:remove_from_cart' item.id %}" style="display: inline;">
-                                {% csrf_token %}
-                                <button type="submit">Удалить</button>
-                            </form>
-                        </td>
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>Товар</th>
+                        <th>Цена за шт.</th>
+                        <th>Количество</th>
+                        <th>Стоимость</th>
+                        <th></th>
                     </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'shop:catalog_detail' item.product.pk %}" class="text-decoration-none">{{ item.product.name }}</a>
+                            </td>
+                            <td>{{ item.product.price }} BYN</td>
+                            <td>
+                                <form method="post" action="{% url 'shop:update_cart' item.id %}" class="d-flex gap-2">
+                                    {% csrf_token %}
+                                    <input type="number" name="quantity" value="{{ item.quantity }}" min="1" max="{{ item.product.stock_quantity }}" class="form-control form-control-sm" style="width: 80px;">
+                                    <button type="submit" class="btn btn-outline-brand btn-sm">Обновить</button>
+                                </form>
+                            </td>
+                            <td class="price-tag">{{ item.item_cost }} BYN</td>
+                            <td>
+                                <form method="post" action="{% url 'shop:remove_from_cart' item.id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline-danger btn-sm">Удалить</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
 
-        <h2>Общая стоимость: {{ total_cost }} BYN</h2>
-
-        <p><a href="{% url 'shop:checkout' %}"><button type="button">Оформить заказ</button></a></p>
+        <div class="d-flex justify-content-between align-items-center mt-4">
+            <h2 class="mb-0">Итого: <span class="price-tag">{{ total_cost }} BYN</span></h2>
+            <a href="{% url 'shop:checkout' %}" class="btn btn-brand btn-lg">Оформить заказ</a>
+        </div>
     {% else %}
-        <p>Ваша корзина пуста.</p>
-        <p><a href="{% url 'shop:catalog' %}">Перейти в каталог товаров</a></p>
+        <p class="text-muted">Ваша корзина пуста.</p>
+        <a href="{% url 'shop:catalog' %}" class="btn btn-brand">Перейти в каталог товаров</a>
     {% endif %}
 {% endblock %}

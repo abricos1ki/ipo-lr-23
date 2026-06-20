@@ -1,31 +1,37 @@
 {% extends "shop/base.html" %}
 
-{% block title %}Вход — Интернет-магазин товаров для йоги{% endblock %}
+{% block title %}Вход — Pranava{% endblock %}
 
 {% block content %}
-    <h1>Вход в систему</h1>
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <h1 class="mb-4 text-center">Вход в систему</h1>
 
-    <form method="post">
-        {% csrf_token %}
-        {% if form.errors %}
-            <p style="color: #8a1f11;">Неверное имя пользователя или пароль. Попробуйте снова.</p>
-        {% endif %}
+            <div class="filters-panel">
+                <form method="post" class="login-form">
+                    {% csrf_token %}
+                    {% if form.errors %}
+                        <div class="alert alert-danger">Неверное имя пользователя или пароль. Попробуйте снова.</div>
+                    {% endif %}
 
-        <p>
-            <label for="id_username">Имя пользователя:</label><br>
-            {{ form.username }}
-        </p>
-        <p>
-            <label for="id_password">Пароль:</label><br>
-            {{ form.password }}
-        </p>
+                    <div class="mb-3">
+                        <label for="id_username" class="form-label">Имя пользователя</label>
+                        {{ form.username }}
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_password" class="form-label">Пароль</label>
+                        {{ form.password }}
+                    </div>
 
-        <input type="hidden" name="next" value="{{ next }}">
-        <button type="submit">Войти</button>
-    </form>
+                    <input type="hidden" name="next" value="{{ next }}">
+                    <button type="submit" class="btn btn-brand w-100">Войти</button>
+                </form>
 
-    <p class="meta">
-        Тестовые пользователи (созданы командой <code>seed_data</code>):
-        anna, ivan, olga, dmitry, maria — пароль <code>password123</code>.
-    </p>
+                <p class="small text-muted mt-3 mb-0">
+                    Тестовые пользователи (созданы командой <code>seed_data</code>):
+                    anna, ivan, olga, dmitry, maria — пароль <code>password123</code>.
+                </p>
+            </div>
+        </div>
+    </div>
 {% endblock %}

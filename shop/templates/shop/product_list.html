@@ -1,76 +1,148 @@
 {% extends "shop/base.html" %}
 
-{% block title %}Каталог товаров — Интернет-магазин товаров для йоги{% endblock %}
+{% block title %}Каталог — Pranava{% endblock %}
 
 {% block content %}
-    <h1>Каталог товаров</h1>
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'shop:home' %}">Главная</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Каталог</li>
+        </ol>
+    </nav>
 
-    <form class="filters" method="get">
-        <input type="text" name="q" placeholder="Поиск по названию или описанию" value="{{ query }}">
+    <h1 class="mb-4">Каталог товаров</h1>
 
-        <select name="category">
-            <option value="">Все категории</option>
-            {% for category in categories %}
-                <option value="{{ category.id }}" {% if current_category == category.id|stringformat:"s" %}selected{% endif %}>
-                    {{ category.name }}
-                </option>
-            {% endfor %}
-        </select>
+    <div class="row">
+        <div class="col-md-3 mb-4">
+            <div class="filters-panel">
+                <form method="get" id="filters-form">
+                    <div class="mb-3">
+                        <label for="filter-q" class="form-label">Поиск</label>
+                        <input type="text" id="filter-q" name="q" class="form-control" placeholder="Название или описание" value="{{ query }}">
+                    </div>
 
-        <select name="manufacturer">
-            <option value="">Все производители</option>
-            {% for manufacturer in manufacturers %}
-                <option value="{{ manufacturer.id }}" {% if current_manufacturer == manufacturer.id|stringformat:"s" %}selected{% endif %}>
-                    {{ manufacturer.name }}
-                </option>
-            {% endfor %}
-        </select>
+                    <div class="mb-3">
+                        <label for="filter-category" class="form-label">Категория</label>
+                        <select id="filter-category" name="category" class="form-select">
+                            <option value="">Все категории</option>
+                            {% for category in categories %}
+                                <option value="{{ category.id }}" {% if current_category == category.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ category.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
-        <select name="sort">
-            <option value="">Сортировка по умолчанию</option>
-            <option value="name" {% if sort == "name" %}selected{% endif %}>По названию</option>
-            <option value="price_asc" {% if sort == "price_asc" %}selected{% endif %}>Сначала дешевле</option>
-            <option value="price_desc" {% if sort == "price_desc" %}selected{% endif %}>Сначала дороже</option>
-        </select>
+                    <div class="mb-3">
+                        <label for="filter-manufacturer" class="form-label">Производитель</label>
+                        <select id="filter-manufacturer" name="manufacturer" class="form-select">
+                            <option value="">Все производители</option>
+                            {% for manufacturer in manufacturers %}
+                                <option value="{{ manufacturer.id }}" {% if current_manufacturer == manufacturer.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ manufacturer.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
-        <button type="submit">Применить</button>
-    </form>
+                    <div class="mb-3">
+                        <label for="filter-sort" class="form-label">Сортировка</label>
+                        <select id="filter-sort" name="sort" class="form-select">
+                            <option value="">По умолчанию</option>
+                            <option value="name" {% if sort == "name" %}selected{% endif %}>По названию</option>
+                            <option value="price_asc" {% if sort == "price_asc" %}selected{% endif %}>Сначала дешевле</option>
+                            <option value="price_desc" {% if sort == "price_desc" %}selected{% endif %}>Сначала дороже</option>
+                        </select>
+                    </div>
 
-    {% if page_obj %}
-        {% for product in page_obj %}
-            <div class="product-card">
-                <h3><a href="{% url 'shop:catalog_detail' product.pk %}">{{ product.name }}</a></h3>
-                <p class="meta">
-                    Категория: {{ product.category.name }} |
-                    Производитель: {{ product.manufacturer.name }} |
-                    На складе: {{ product.stock_quantity }} шт.
+                    <button type="submit" class="btn btn-brand w-100">Применить фильтры</button>
+                </form>
+
+                <hr>
+
+                <p class="small text-muted mb-2">
+                    Также можно подгрузить каталог напрямую из REST API (без перезагрузки страницы):
                 </p>
-                <p class="price">{{ product.price }} BYN</p>
-
-                {% if user.is_authenticated %}
-                    <form method="post" action="{% url 'shop:add_to_cart' product.pk %}" class="add-to-cart-form">
-                        {% csrf_token %}
-                        <input type="number" name="quantity" value="1" min="1" max="{{ product.stock_quantity }}" {% if product.stock_quantity == 0 %}disabled{% endif %}>
-                        <button type="submit" {% if product.stock_quantity == 0 %}disabled{% endif %}>
-                            {% if product.stock_quantity == 0 %}Нет в наличии{% else %}Добавить в корзину{% endif %}
-                        </button>
-                    </form>
-                {% else %}
-                    <p class="meta"><a href="{% url 'login' %}?next={{ request.path }}">Войдите</a>, чтобы добавить товар в корзину.</p>
-                {% endif %}
+                <button type="button" class="btn btn-outline-brand btn-sm w-100" id="load-via-api-btn">
+                    Загрузить через API
+                </button>
             </div>
-        {% endfor %}
+        </div>
 
-        <div class="pagination">
-            {% if page_obj.has_previous %}
-                <a href="?page={{ page_obj.previous_page_number }}&q={{ query }}&category={{ current_category|default:'' }}&manufacturer={{ current_manufacturer|default:'' }}&sort={{ sort }}">&laquo; Назад</a>
-            {% endif %}
-            <span>Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}</span>
-            {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}&q={{ query }}&category={{ current_category|default:'' }}&manufacturer={{ current_manufacturer|default:'' }}&sort={{ sort }}">Вперёд &raquo;</a>
+        <div class="col-md-9">
+            <div id="product-grid" class="row">
+                {% for product in page_obj %}
+                    <div class="col-sm-6 col-md-4 col-lg-4 mb-4">
+                        <div class="card product-card h-100">
+                            {% if product.photo %}
+                                <img src="{{ product.photo.url }}" class="card-img-top" alt="{{ product.name }}">
+                            {% else %}
+                                <div class="product-card-img-placeholder">Фото скоро появится</div>
+                            {% endif %}
+                            <div class="card-body d-flex flex-column">
+                                <h5 class="card-title">{{ product.name }}</h5>
+                                <p class="card-text text-muted small mb-1">{{ product.category.name }}</p>
+                                <p class="price-tag mb-2">{{ product.price }} BYN</p>
+                                <p class="mb-2">
+                                    {% if product.stock_quantity > 0 %}
+                                        <span class="badge stock-badge in-stock">В наличии: {{ product.stock_quantity }} шт.</span>
+                                    {% else %}
+                                        <span class="badge stock-badge out-of-stock">Нет в наличии</span>
+                                    {% endif %}
+                                </p>
+                                <div class="mt-auto d-flex justify-content-between align-items-center">
+                                    <a href="{% url 'shop:catalog_detail' product.pk %}" class="btn btn-outline-brand btn-sm">Подробнее</a>
+                                    {% if user.is_authenticated %}
+                                        <form method="post" action="{% url 'shop:add_to_cart' product.pk %}" class="m-0">
+                                            {% csrf_token %}
+                                            <input type="hidden" name="quantity" value="1">
+                                            <button type="submit" class="btn btn-brand btn-sm" {% if product.stock_quantity == 0 %}disabled{% endif %}>
+                                                {% if product.stock_quantity == 0 %}Нет в наличии{% else %}В корзину{% endif %}
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <p class="text-muted">Товары не найдены. Попробуйте изменить фильтры.</p>
+                {% endfor %}
+            </div>
+
+            {% if page_obj.paginator.num_pages > 1 %}
+                <nav aria-label="Навигация по страницам каталога">
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ query }}&category={{ current_category|default:'' }}&manufacturer={{ current_manufacturer|default:'' }}&sort={{ sort }}">&laquo; Назад</a>
+                            </li>
+                        {% endif %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}</span>
+                        </li>
+                        {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ query }}&category={{ current_category|default:'' }}&manufacturer={{ current_manufacturer|default:'' }}&sort={{ sort }}">Вперёд &raquo;</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
             {% endif %}
         </div>
-    {% else %}
-        <p>Товары не найдены.</p>
-    {% endif %}
+    </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Загрузка каталога через REST API (Fetch API) -- задание 6 лр21.
+    document.getElementById('load-via-api-btn').addEventListener('click', function () {
+        const form = document.getElementById('filters-form');
+        loadProducts('product-grid', {
+            category: form.category.value,
+            manufacturer: form.manufacturer.value,
+            q: form.q.value.trim(),
+        });
+    });
+</script>
 {% endblock %}

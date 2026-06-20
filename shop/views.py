@@ -16,20 +16,21 @@ from .receipts import build_order_receipt
 
 def home(request):
     """
-    Главная страница магазина.
-    Содержит ссылки на страницу "Об авторе" и страницу "О магазине".
+    Главная страница магазина (лабораторная работа №21).
+    Hero-секция, сетка популярных товаров (6 штук) и список категорий
+    со ссылками на отфильтрованный каталог.
     """
-    text = (
-        "Интернет-магазин товаров для йоги\n"
-        "==================================\n\n"
-        "Добро пожаловать в учебный интернет-магазин товаров для практики йоги!\n\n"
-        "Доступные страницы:\n"
-        "  - /about-author/  -- информация об авторе лабораторной работы\n"
-        "  - /about-shop/    -- информация о магазине\n"
-        "  - /catalog/       -- каталог товаров (фильтрация, поиск, сортировка)\n"
-        "  - /cart/          -- корзина пользователя (требуется вход в систему)\n"
+    popular_products = (
+        Product.objects.select_related("category", "manufacturer")
+        .order_by("-id")[:6]
     )
-    return HttpResponse(text, content_type="text/plain; charset=utf-8")
+    categories = Category.objects.all()
+
+    context = {
+        "popular_products": popular_products,
+        "categories": categories,
+    }
+    return render(request, "shop/index.html", context)
 
 
 def about_author(request):
@@ -75,14 +76,14 @@ def about_shop(request):
 
 def product_list(request):
     """
-    Список товаров (лабораторная работа №17).
+    Список товаров / каталог (лабораторная работа №17, оформление №21).
 
     Поддерживает через GET-параметры:
       - category     -- фильтрация по id категории
       - manufacturer -- фильтрация по id производителя
       - q            -- поиск по названию или описанию (через Q-объекты)
       - sort         -- сортировка: 'price_asc', 'price_desc', 'name'
-      - page         -- номер страницы (пагинация, 10 товаров на страницу)
+      - page         -- номер страницы (пагинация, 9 товаров на страницу)
     """
     products = Product.objects.select_related("category", "manufacturer").all()
 
@@ -111,7 +112,7 @@ def product_list(request):
     else:
         products = products.order_by("id")
 
-    paginator = Paginator(products, 10)
+    paginator = Paginator(products, 9)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
 
