@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
     'shop',
 ]
 
@@ -161,3 +162,21 @@ else:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER or 'yoga-shop@example.com'
+
+# Django REST Framework (лабораторная работа №20)
+# https://www.django-rest-framework.org/api-guide/settings/
+REST_FRAMEWORK = {
+    # SessionAuthentication -- для работы через браузерный DRF-интерфейс
+    # (используется текущая сессия Django, например после входа через /accounts/login/).
+    # BasicAuthentication -- для запросов из Postman/curl с логином и паролем.
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+    ],
+    # Доступ к API только для аутентифицированных пользователей.
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,
+}

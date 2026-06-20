@@ -190,6 +190,90 @@ GET-параметры `/products/`:
 
 ---
 
+## Лабораторная работа №20. Реализация REST API с Django REST Framework
+
+Реализован REST API для всех моделей магазина с использованием
+Django REST Framework: сериализаторы, `ModelViewSet`, маршрутизация
+через `DefaultRouter`, доступ только для аутентифицированных пользователей.
+
+### Установка и настройка DRF
+
+- `rest_framework` подключён в `INSTALLED_APPS`.
+- В `settings.py` добавлен блок `REST_FRAMEWORK`:
+  - `DEFAULT_AUTHENTICATION_CLASSES`: `SessionAuthentication` (для входа через браузерный интерфейс DRF) и `BasicAuthentication` (для запросов из Postman/curl с логином и паролем).
+  - `DEFAULT_PERMISSION_CLASSES`: `IsAuthenticated` -- доступ к API только для вошедших пользователей.
+  - Постраничная разбивка результатов (`PageNumberPagination`, 10 объектов на страницу).
+
+### Сериализаторы (shop/serializers.py)
+
+Созданы сериализаторы (`ModelSerializer`) для всех моделей магазина:
+
+- `CategorySerializer`, `ManufacturerSerializer` -- простые сериализаторы.
+- `ProductSerializer` -- добавлены read-only поля `category_name`/`manufacturer_name` для удобства чтения, валидация цены и количества на складе (не могут быть отрицательными).
+- `CartItemSerializer`, `OrderItemSerializer` -- добавлено вычисляемое поле `item_cost` (цена × количество) и `product_name`.
+- `CartSerializer`, `OrderSerializer` -- включают вложенный список элементов (`items`, только для чтения) и `total_cost` (общая стоимость).
+- В `CartItemSerializer` реализована валидация: количество не может превышать остаток товара на складе.
+
+### API-представления (shop/api_views.py)
+
+Все представления реализованы через `viewsets.ModelViewSet`, что
+автоматически даёт полный набор CRUD-операций (list, create, retrieve,
+update, partial_update, destroy):
+
+- `CategoryViewSet`, `ManufacturerViewSet` -- доступны всем аутентифицированным пользователям.
+- `ProductViewSet` -- поддерживает фильтрацию по `?category=<id>` и `?manufacturer=<id>`.
+- `CartViewSet`, `CartItemViewSet`, `OrderViewSet`, `OrderItemViewSet` -- переопределён `get_queryset()`, чтобы обычный пользователь видел и мог изменять только свои собственные корзину/заказы (суперпользователь видит все). Попытка обратиться к чужому объекту по id возвращает `404`.
+
+### URL-маршруты (shop/api_urls.py)
+
+Используется `DefaultRouter` из DRF, который автоматически генерирует
+маршруты для каждого зарегистрированного `ViewSet`:
+
+| Эндпоинт                  | Методы                                  |
+|------------------------------|--------------------------------------------|
+| `/api/categories/`           | GET, POST, GET/PUT/PATCH/DELETE `<id>/`     |
+| `/api/manufacturers/`        | GET, POST, GET/PUT/PATCH/DELETE `<id>/`     |
+| `/api/products/`             | GET, POST, GET/PUT/PATCH/DELETE `<id>/` (+ фильтры `?category=`, `?manufacturer=`) |
+| `/api/carts/`                | GET, POST, GET/PUT/PATCH/DELETE `<id>/` (только свои данные) |
+| `/api/cart-items/`           | GET, POST, GET/PUT/PATCH/DELETE `<id>/` (только свои данные) |
+| `/api/orders/`               | GET, POST, GET/PUT/PATCH/DELETE `<id>/` (только свои данные) |
+| `/api/order-items/`          | GET, POST, GET/PUT/PATCH/DELETE `<id>/` (только свои данные) |
+| `/api-auth/login/`           | Вход в браузерный интерфейс DRF              |
+
+API подключён в главном `yoga_shop/urls.py` под префиксом `/api/`.
+
+### Аутентификация и тестирование
+
+Доступ к API возможен:
+
+1. **Через сессию** -- войти на сайте обычным способом (`/accounts/login/`) и обращаться к `/api/...` из того же браузера (или передавая cookies в Postman/curl).
+2. **Через Basic Auth** -- например, `curl -u anna:password123 http://127.0.0.1:8000/api/products/`.
+3. **Через браузерный интерфейс DRF** -- открыть `/api/products/` в браузере, появится удобный HTML-интерфейс с формами для POST/PUT и кнопкой входа (`/api-auth/login/`).
+
+Без аутентификации API возвращает `403 Forbidden`.
+
+Пример проверки через curl (полный CRUD для товара):
+
+```bash
+# Список товаров
+curl -u anna:password123 http://127.0.0.1:8000/api/products/
+
+# Создание товара
+curl -u anna:password123 -X POST http://127.0.0.1:8000/api/products/ \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Новый товар", "description": "Описание", "price": "100.00", "stock_quantity": 5, "category": 1, "manufacturer": 1}'
+
+# Обновление товара (PUT, id=35)
+curl -u anna:password123 -X PUT http://127.0.0.1:8000/api/products/35/ \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Обновлённый товар", "description": "Описание", "price": "120.00", "stock_quantity": 3, "category": 1, "manufacturer": 1}'
+
+# Удаление товара
+curl -u anna:password123 -X DELETE http://127.0.0.1:8000/api/products/35/
+```
+
+---
+
 ## Структура проекта
 
 ```
@@ -210,6 +294,9 @@ GET-параметры `/products/`:
     ├── models.py
     ├── admin.py
     ├── receipts.py             # генерация чека в Excel (лр19)
+    ├── serializers.py          # сериализаторы DRF (лр20)
+    ├── api_views.py            # ModelViewSet'ы DRF (лр20)
+    ├── api_urls.py             # маршруты API через DefaultRouter (лр20)
     ├── templates/
     │   ├── shop/
     │   │   ├── base.html
@@ -296,11 +383,14 @@ GET-параметры `/products/`:
    - Оформление заказа (требует входа): [http://127.0.0.1:8000/checkout/](http://127.0.0.1:8000/checkout/)
    - Вход в систему: [http://127.0.0.1:8000/accounts/login/](http://127.0.0.1:8000/accounts/login/)
    - Админ-панель: [http://127.0.0.1:8000/admin/](http://127.0.0.1:8000/admin/)
+   - REST API (требует входа или Basic Auth): [http://127.0.0.1:8000/api/products/](http://127.0.0.1:8000/api/products/)
+   - Вход в браузерный интерфейс API: [http://127.0.0.1:8000/api-auth/login/](http://127.0.0.1:8000/api-auth/login/)
 
 ## Используемые технологии
 
 - Python 3
 - Django 5.1
+- Django REST Framework (REST API)
 - Pillow (для работы с изображениями товаров)
 - openpyxl (генерация чека в формате Excel)
 - SQLite
