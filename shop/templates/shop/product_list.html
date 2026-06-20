@@ -1,0 +1,64 @@
+{% extends "shop/base.html" %}
+
+{% block title %}Каталог товаров — Интернет-магазин товаров для йоги{% endblock %}
+
+{% block content %}
+    <h1>Каталог товаров</h1>
+
+    <form class="filters" method="get">
+        <input type="text" name="q" placeholder="Поиск по названию или описанию" value="{{ query }}">
+
+        <select name="category">
+            <option value="">Все категории</option>
+            {% for category in categories %}
+                <option value="{{ category.id }}" {% if current_category == category.id|stringformat:"s" %}selected{% endif %}>
+                    {{ category.name }}
+                </option>
+            {% endfor %}
+        </select>
+
+        <select name="manufacturer">
+            <option value="">Все производители</option>
+            {% for manufacturer in manufacturers %}
+                <option value="{{ manufacturer.id }}" {% if current_manufacturer == manufacturer.id|stringformat:"s" %}selected{% endif %}>
+                    {{ manufacturer.name }}
+                </option>
+            {% endfor %}
+        </select>
+
+        <select name="sort">
+            <option value="">Сортировка по умолчанию</option>
+            <option value="name" {% if sort == "name" %}selected{% endif %}>По названию</option>
+            <option value="price_asc" {% if sort == "price_asc" %}selected{% endif %}>Сначала дешевле</option>
+            <option value="price_desc" {% if sort == "price_desc" %}selected{% endif %}>Сначала дороже</option>
+        </select>
+
+        <button type="submit">Применить</button>
+    </form>
+
+    {% if page_obj %}
+        {% for product in page_obj %}
+            <div class="product-card">
+                <h3><a href="{% url 'shop:product_detail' product.pk %}">{{ product.name }}</a></h3>
+                <p class="meta">
+                    Категория: {{ product.category.name }} |
+                    Производитель: {{ product.manufacturer.name }} |
+                    На складе: {{ product.stock_quantity }} шт.
+                </p>
+                <p class="price">{{ product.price }} BYN</p>
+            </div>
+        {% endfor %}
+
+        <div class="pagination">
+            {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}&q={{ query }}&category={{ current_category|default:'' }}&manufacturer={{ current_manufacturer|default:'' }}&sort={{ sort }}">&laquo; Назад</a>
+            {% endif %}
+            <span>Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}</span>
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}&q={{ query }}&category={{ current_category|default:'' }}&manufacturer={{ current_manufacturer|default:'' }}&sort={{ sort }}">Вперёд &raquo;</a>
+            {% endif %}
+        </div>
+    {% else %}
+        <p>Товары не найдены.</p>
+    {% endif %}
+{% endblock %}

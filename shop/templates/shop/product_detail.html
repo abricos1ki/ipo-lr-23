@@ -1,0 +1,23 @@
+{% extends "shop/base.html" %}
+
+{% block title %}{{ product.name }} — Интернет-магазин товаров для йоги{% endblock %}
+
+{% block content %}
+    <p><a href="{% url 'shop:product_list' %}">&laquo; Назад в каталог</a></p>
+
+    <h1>{{ product.name }}</h1>
+
+    {% if product.photo %}
+        <img src="{{ product.photo.url }}" alt="{{ product.name }}" style="max-width: 300px; border-radius: 8px;">
+    {% endif %}
+
+    <p class="price">{{ product.price }} BYN</p>
+
+    <p>{{ product.description }}</p>
+
+    <table>
+        <tr><td><strong>Категория:</strong></td><td>{{ product.category.name }}</td></tr>
+        <tr><td><strong>Производитель:</strong></td><td>{{ product.manufacturer.name }} ({{ product.manufacturer.country }})</td></tr>
+        <tr><td><strong>На складе:</strong></td><td>{{ product.stock_quantity }} шт.</td></tr>
+    </table>
+{% endblock %}
