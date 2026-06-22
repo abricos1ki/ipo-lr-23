@@ -143,6 +143,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'shop:cart_view'
 LOGOUT_REDIRECT_URL = 'shop:home'
+PASSWORD_CHANGE_REDIRECT_URL = 'password_change_done'
 
 # Email (лабораторная работа №19)
 # https://docs.djangoproject.com/en/5.1/topics/email/

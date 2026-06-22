@@ -218,3 +218,63 @@ class OrderItem(models.Model):
     def item_cost(self):
         """Возвращает стоимость позиции заказа (цена на момент заказа * количество)."""
         return self.price * self.quantity
+
+
+class Profile(models.Model):
+    """
+    Профиль пользователя (лабораторная работа №22).
+    Связан с User один-к-одному, создаётся автоматически при регистрации
+    (см. сигнал post_save ниже).
+    """
+
+    EXPERIENCE_BEGINNER = "beginner"
+    EXPERIENCE_PRACTITIONER = "practitioner"
+    EXPERIENCE_INSTRUCTOR = "instructor"
+    EXPERIENCE_CHOICES = [
+        (EXPERIENCE_BEGINNER, "Новичок"),
+        (EXPERIENCE_PRACTITIONER, "Практикующий"),
+        (EXPERIENCE_INSTRUCTOR, "Инструктор"),
+    ]
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        verbose_name="пользователь",
+        on_delete=models.CASCADE,
+        related_name="profile",
+    )
+    full_name = models.CharField("полное имя", max_length=150, blank=True)
+    phone = models.CharField("телефон", max_length=30, blank=True)
+    address = models.CharField("адрес доставки по умолчанию", max_length=255, blank=True)
+
+    # Поля, специфичные для тематики магазина (вариант 22 -- товары для йоги)
+    favorite_category = models.ForeignKey(
+        Category,
+        verbose_name="любимая категория товаров",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    experience_level = models.CharField(
+        "уровень практики",
+        max_length=20,
+        choices=EXPERIENCE_CHOICES,
+        default=EXPERIENCE_BEGINNER,
+    )
+
+    class Meta:
+        verbose_name = "Профиль"
+        verbose_name_plural = "Профили"
+
+    def __str__(self):
+        return f"Профиль пользователя {self.user.username}"
+
+    @property
+    def is_admin_role(self):
+        """
+        Роль пользователя для отображения в личном кабинете (лр22).
+        В проекте роль администратора/менеджера определяется через
+        стандартный флаг Django `is_staff` (вариант 1 из задания).
+        """
+        return self.user.is_staff
+

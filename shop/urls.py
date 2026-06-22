@@ -22,4 +22,10 @@ urlpatterns = [
 
     # Оформление заказа (лабораторная работа №19)
     path('checkout/', views.checkout, name='checkout'),
+
+    # Регистрация и личный кабинет (лабораторная работа №22)
+    path('accounts/register/', views.register, name='register'),
+    path('account/', views.account_view, name='account'),
+    path('account/update/', views.account_update, name='account_update'),
+    path('account/orders/<int:pk>/', views.order_detail_view, name='order_detail'),
 ]

@@ -1,0 +1,50 @@
+{% extends "shop/base.html" %}
+
+{% block title %}Заказ №{{ order.pk }} — Pranava{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'shop:home' %}">Главная</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'shop:account' %}">Личный кабинет</a></li>
+        <li class="breadcrumb-item active">Заказ №{{ order.pk }}</li>
+    </ol>
+</nav>
+
+<h1 class="mb-2">Заказ №{{ order.pk }}</h1>
+<p class="text-muted mb-4">
+    Оформлен: <strong>{{ order.created_at|date:"d.m.Y H:i" }}</strong> |
+    Покупатель: <strong>{{ order.user.username }}</strong> |
+    Адрес доставки: {{ order.delivery_address }}
+    {% if order.comment %} | Комментарий: {{ order.comment }}{% endif %}
+</p>
+
+<div class="table-responsive">
+    <table class="table align-middle">
+        <thead>
+            <tr>
+                <th>Товар</th>
+                <th>Цена на момент заказа</th>
+                <th>Количество</th>
+                <th>Стоимость</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in order.items.all %}
+                <tr>
+                    <td>
+                        <a href="{% url 'shop:catalog_detail' item.product.pk %}">{{ item.product.name }}</a>
+                    </td>
+                    <td>{{ item.price }} BYN</td>
+                    <td>{{ item.quantity }} шт.</td>
+                    <td class="price-tag">{{ item.item_cost }} BYN</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<h2 class="mt-3">Итого: <span class="price-tag">{{ order.total_cost }} BYN</span></h2>
+
+<a href="{% url 'shop:account' %}" class="btn btn-outline-brand mt-3">&laquo; Назад в личный кабинет</a>
+{% endblock %}

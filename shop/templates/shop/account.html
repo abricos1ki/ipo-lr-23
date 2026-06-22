@@ -1,0 +1,211 @@
+{% extends "shop/base.html" %}
+{% load static %}
+
+{% block title %}Личный кабинет — Pranava{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'shop:home' %}">Главная</a></li>
+        <li class="breadcrumb-item active">Личный кабинет</li>
+    </ol>
+</nav>
+
+<h1 class="mb-4">Личный кабинет</h1>
+
+<div class="row g-4">
+    <!-- ===== БЛОК ПРОФИЛЯ ===== -->
+    <div class="col-md-5">
+        <div class="filters-panel h-100">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <h2 class="h5 mb-0">Мой профиль</h2>
+                {% if profile.is_admin_role %}
+                    <span class="badge" style="background-color: var(--terracotta);">Администратор</span>
+                {% else %}
+                    <span class="badge" style="background-color: var(--sage-600);">Покупатель</span>
+                {% endif %}
+            </div>
+
+            <form method="post" action="{% url 'shop:account_update' %}" id="profile-form">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label">Имя пользователя</label>
+                    <input type="text" class="form-control" value="{{ user.username }}" disabled>
+                </div>
+
+                <div class="mb-3">
+                    <label for="id_email" class="form-label">Email</label>
+                    <input type="email" id="id_email" name="email" class="form-control" value="{{ user.email }}">
+                </div>
+
+                <div class="mb-3">
+                    <label for="id_full_name" class="form-label">Полное имя</label>
+                    <input type="text" id="id_full_name" name="full_name" class="form-control" value="{{ profile.full_name }}">
+                </div>
+
+                <div class="mb-3">
+                    <label for="id_phone" class="form-label">Телефон</label>
+                    <input type="text" id="id_phone" name="phone" class="form-control" value="{{ profile.phone }}">
+                </div>
+
+                <div class="mb-3">
+                    <label for="id_address" class="form-label">Адрес доставки по умолчанию</label>
+                    <input type="text" id="id_address" name="address" class="form-control" value="{{ profile.address }}">
+                </div>
+
+                <!-- Поля, специфичные для магазина йоги (вариант 22) -->
+                <div class="mb-3">
+                    <label for="id_favorite_category" class="form-label">Любимая категория товаров</label>
+                    <select id="id_favorite_category" name="favorite_category" class="form-select">
+                        <option value="">— не выбрана —</option>
+                        {% for cat in categories %}
+                            <option value="{{ cat.id }}" {% if profile.favorite_category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label for="id_experience_level" class="form-label">Уровень практики йоги</label>
+                    <select id="id_experience_level" name="experience_level" class="form-select">
+                        <option value="beginner" {% if profile.experience_level == "beginner" %}selected{% endif %}>Новичок</option>
+                        <option value="practitioner" {% if profile.experience_level == "practitioner" %}selected{% endif %}>Практикующий</option>
+                        <option value="instructor" {% if profile.experience_level == "instructor" %}selected{% endif %}>Инструктор</option>
+                    </select>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-brand">Сохранить изменения</button>
+                    <a href="{% url 'password_change' %}" class="btn btn-outline-brand">Сменить пароль</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== БЛОК ЗАКАЗОВ ===== -->
+    <div class="col-md-7">
+        <div class="filters-panel h-100">
+            <h2 class="h5 mb-3">Мои заказы</h2>
+            <div id="orders-block">
+                {% if orders %}
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead>
+                                <tr>
+                                    <th>№</th>
+                                    <th>Дата</th>
+                                    <th>Позиций</th>
+                                    <th>Итого</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in orders %}
+                                    <tr>
+                                        <td>{{ order.pk }}</td>
+                                        <td>{{ order.created_at|date:"d.m.Y H:i" }}</td>
+                                        <td>{{ order.items.count }}</td>
+                                        <td class="price-tag">{{ order.total_cost }} BYN</td>
+                                        <td>
+                                            <a href="{% url 'shop:order_detail' order.pk %}" class="btn btn-outline-brand btn-sm">Подробнее</a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted">Вы ещё не оформляли заказов.</p>
+                    <a href="{% url 'shop:catalog' %}" class="btn btn-brand btn-sm">Перейти в каталог</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/*
+ * Обновление профиля через Fetch API (лр22 задание 5).
+ * Перехватываем отправку формы и отправляем PATCH /api/me/,
+ * чтобы продемонстрировать работу с авторизацией на клиенте.
+ * При успехе дополнительно показываем тост и перезагружаем данные
+ * блока заказов через GET /api/orders/.
+ */
+document.getElementById('profile-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const csrfToken = getCsrfToken();
+    const formData = new FormData(this);
+
+    // Собираем payload для PATCH /api/me/
+    const payload = {
+        full_name: formData.get('full_name') || '',
+        phone: formData.get('phone') || '',
+        address: formData.get('address') || '',
+        experience_level: formData.get('experience_level') || 'beginner',
+    };
+    const favCat = formData.get('favorite_category');
+    if (favCat) payload.favorite_category = parseInt(favCat);
+
+    // Обработчик 401/403 на клиенте (лр22 задание 5)
+    fetch('/api/me/', {
+        method: 'PATCH',
+        credentials: 'same-origin',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken,
+        },
+        body: JSON.stringify(payload),
+    })
+    .then(response => {
+        if (response.status === 401 || response.status === 403) {
+            throw new Error('Недостаточно прав. Войдите в систему и повторите попытку.');
+        }
+        if (!response.ok) throw new Error('Ошибка сервера: ' + response.status);
+        return response.json();
+    })
+    .then(data => {
+        showToast('Профиль успешно обновлён через API!');
+        // Дополнительно обновляем email через стандартную Django-форму
+        const emailField = document.getElementById('id_email');
+        if (emailField.value) {
+            const hiddenForm = document.createElement('form');
+            hiddenForm.method = 'POST';
+            hiddenForm.action = document.getElementById('profile-form').action;
+            hiddenForm.innerHTML = `
+                <input name="csrfmiddlewaretoken" value="${csrfToken}">
+                <input name="full_name" value="${payload.full_name}">
+                <input name="phone" value="${payload.phone}">
+                <input name="address" value="${payload.address}">
+                <input name="experience_level" value="${payload.experience_level}">
+                <input name="email" value="${emailField.value}">
+                ${favCat ? '<input name="favorite_category" value="' + favCat + '">' : ''}
+            `;
+            document.body.appendChild(hiddenForm);
+            hiddenForm.submit();
+        }
+    })
+    .catch(error => {
+        showToast(error.message, true);
+    });
+});
+
+// Загружаем количество заказов через API и показываем в интерфейсе
+fetch('/api/orders/', {
+    credentials: 'same-origin',
+    headers: { 'Accept': 'application/json' },
+})
+.then(r => r.ok ? r.json() : null)
+.then(data => {
+    if (data && data.count !== undefined) {
+        const badge = document.createElement('span');
+        badge.className = 'badge ms-2';
+        badge.style.backgroundColor = 'var(--sage-600)';
+        badge.textContent = data.count + ' заказ(ов)';
+        document.querySelector('#orders-block').previousElementSibling.appendChild(badge);
+    }
+})
+.catch(() => {});
+</script>
+{% endblock %}

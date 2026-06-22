@@ -5,7 +5,7 @@
 
 from rest_framework import serializers
 
-from .models import Cart, CartItem, Category, Manufacturer, Order, OrderItem, Product
+from .models import Cart, CartItem, Category, Manufacturer, Order, OrderItem, Product, Profile
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -150,3 +150,38 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def get_total_cost(self, obj):
         return obj.total_cost()
+
+
+class ProfileSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор профиля пользователя (лабораторная работа №22).
+    Используется для эндпоинта GET/PATCH /api/me/.
+    Поля username/email/is_staff -- только для чтения (отображение роли
+    и логина); редактируются full_name, phone, address,
+    favorite_category, experience_level.
+    """
+
+    username = serializers.CharField(source="user.username", read_only=True)
+    email = serializers.EmailField(source="user.email", read_only=True)
+    is_staff = serializers.BooleanField(source="user.is_staff", read_only=True)
+    favorite_category_name = serializers.CharField(
+        source="favorite_category.name", read_only=True, default=None
+    )
+    experience_level_display = serializers.CharField(
+        source="get_experience_level_display", read_only=True
+    )
+
+    class Meta:
+        model = Profile
+        fields = [
+            "username",
+            "email",
+            "is_staff",
+            "full_name",
+            "phone",
+            "address",
+            "favorite_category",
+            "favorite_category_name",
+            "experience_level",
+            "experience_level_display",
+        ]

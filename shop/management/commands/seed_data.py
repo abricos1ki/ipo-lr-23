@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from shop.models import Cart, CartItem, Category, Manufacturer, Product
+from shop.models import Cart, CartItem, Category, Manufacturer, Product, Profile
 
 
 MANUFACTURERS = [
@@ -46,7 +46,8 @@ PRODUCT_TEMPLATES = [
 class Command(BaseCommand):
     help = (
         "Заполняет базу данных тестовыми данными: 5 производителей, "
-        "10 категорий, 34 товара, 5 пользователей (с корзинами и позициями)."
+        "10 категорий, 34 товара, 5 покупателей и 1 администратора "
+        "(с корзинами, профилями и позициями)."
     )
 
     @transaction.atomic
@@ -99,8 +100,15 @@ class Command(BaseCommand):
             )
             products.append(product)
 
-        self.stdout.write("Создание пользователей и корзин...")
-        usernames = ["anna", "ivan", "olga", "dmitry", "maria"]
+        self.stdout.write("Создание пользователей, профилей и корзин...")
+        profile_data = {
+            "anna": ("Анна Соколова", "+375 29 111-22-33", "г. Минск, ул. Сурганова, д. 5, кв. 12", Profile.EXPERIENCE_PRACTITIONER),
+            "ivan": ("Иван Петров", "+375 29 222-33-44", "г. Минск, пр-т Независимости, д. 80, кв. 3", Profile.EXPERIENCE_BEGINNER),
+            "olga": ("Ольга Кузнецова", "+375 29 333-44-55", "г. Минск, ул. Веры Хоружей, д. 8, кв. 45", Profile.EXPERIENCE_INSTRUCTOR),
+            "dmitry": ("Дмитрий Волков", "+375 29 444-55-66", "г. Минск, ул. Якубова, д. 64, кв. 9", Profile.EXPERIENCE_BEGINNER),
+            "maria": ("Мария Новак", "+375 29 555-66-77", "г. Минск, ул. Притыцкого, д. 29, кв. 17", Profile.EXPERIENCE_PRACTITIONER),
+        }
+        usernames = list(profile_data.keys())
         for username in usernames:
             user, created = User.objects.get_or_create(
                 username=username,
@@ -109,6 +117,15 @@ class Command(BaseCommand):
             if created:
                 user.set_password("password123")
                 user.save()
+
+            full_name, phone, address, experience = profile_data[username]
+            profile, _ = Profile.objects.get_or_create(user=user)
+            profile.full_name = full_name
+            profile.phone = phone
+            profile.address = address
+            profile.experience_level = experience
+            profile.favorite_category = random.choice(categories)
+            profile.save()
 
             cart, _ = Cart.objects.get_or_create(user=user)
 
@@ -123,11 +140,30 @@ class Command(BaseCommand):
                     quantity=random.randint(1, max(1, max_qty)),
                 )
 
+        self.stdout.write("Создание тестового администратора...")
+        manager, created = User.objects.get_or_create(
+            username="manager",
+            defaults={"email": "manager@example.com", "is_staff": True},
+        )
+        if created:
+            manager.set_password("password123")
+        manager.is_staff = True
+        manager.save()
+        manager_profile, _ = Profile.objects.get_or_create(user=manager)
+        manager_profile.full_name = "Светлана Менеджерова"
+        manager_profile.phone = "+375 29 999-00-11"
+        manager_profile.address = "г. Минск, ул. Сухаревская, д. 1 (офис)"
+        manager_profile.experience_level = Profile.EXPERIENCE_INSTRUCTOR
+        manager_profile.save()
+        Cart.objects.get_or_create(user=manager)
+
         self.stdout.write(self.style.SUCCESS(
             "Готово: "
             f"{len(manufacturers)} производителей, "
             f"{len(categories)} категорий, "
             f"{len(products)} товаров, "
-            f"{len(usernames)} пользователей с корзинами."
+            f"{len(usernames)} покупателей с корзинами и профилями, "
+            "1 администратор (manager)."
         ))
         self.stdout.write("Пароль для всех тестовых пользователей: password123")
+        self.stdout.write("Администратор (is_staff=True): manager / password123")

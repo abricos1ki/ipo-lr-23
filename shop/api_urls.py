@@ -4,6 +4,7 @@ URL-маршруты REST API (лабораторная работа №20).
 маршруты list/create/retrieve/update/partial_update/destroy для каждого ViewSet.
 """
 
+from django.urls import path
 from rest_framework.routers import DefaultRouter
 
 from .api_views import (
@@ -11,6 +12,7 @@ from .api_views import (
     CartViewSet,
     CategoryViewSet,
     ManufacturerViewSet,
+    MeView,
     OrderItemViewSet,
     OrderViewSet,
     ProductViewSet,
@@ -25,4 +27,6 @@ router.register(r"cart-items", CartItemViewSet, basename="cartitem")
 router.register(r"orders", OrderViewSet, basename="order")
 router.register(r"order-items", OrderItemViewSet, basename="orderitem")
 
-urlpatterns = router.urls
+urlpatterns = [
+    path("me/", MeView.as_view(), name="api-me"),
+] + router.urls

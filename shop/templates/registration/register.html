@@ -1,0 +1,55 @@
+{% extends "shop/base.html" %}
+
+{% block title %}Регистрация — Pranava{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <h1 class="mb-4 text-center">Регистрация</h1>
+        <div class="filters-panel">
+            <form method="post" class="login-form">
+                {% csrf_token %}
+                {% if form.errors %}
+                    <div class="alert alert-danger">
+                        Пожалуйста, исправьте ошибки ниже.
+                    </div>
+                {% endif %}
+
+                <div class="mb-3">
+                    <label for="id_username" class="form-label">Имя пользователя</label>
+                    {{ form.username }}
+                    {% if form.username.errors %}
+                        <div class="text-danger small">{{ form.username.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <label for="id_email" class="form-label">Email (для получения чеков)</label>
+                    <input type="email" id="id_email" name="email" class="form-control" placeholder="example@mail.ru">
+                </div>
+
+                <div class="mb-3">
+                    <label for="id_password1" class="form-label">Пароль</label>
+                    {{ form.password1 }}
+                    {% if form.password1.errors %}
+                        <div class="text-danger small">{{ form.password1.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="mb-3">
+                    <label for="id_password2" class="form-label">Подтверждение пароля</label>
+                    {{ form.password2 }}
+                    {% if form.password2.errors %}
+                        <div class="text-danger small">{{ form.password2.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <button type="submit" class="btn btn-brand w-100">Зарегистрироваться</button>
+            </form>
+
+            <p class="text-center small text-muted mt-3 mb-0">
+                Уже есть аккаунт? <a href="{% url 'login' %}">Войти</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

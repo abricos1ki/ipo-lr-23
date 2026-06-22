@@ -1,7 +1,10 @@
 from decimal import Decimal
 
-from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.contrib.auth import login
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.models import User
 from django.core.mail import EmailMessage
 from django.core.paginator import Paginator
 from django.db import transaction
@@ -10,7 +13,7 @@ from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
-from .models import Cart, CartItem, Category, Manufacturer, Order, OrderItem, Product
+from .models import Cart, CartItem, Category, Manufacturer, Order, OrderItem, Product, Profile
 from .receipts import build_order_receipt
 
 
@@ -364,3 +367,100 @@ def checkout(request):
         "total_cost": cart.total_cost(),
     }
     return render(request, "shop/checkout.html", context)
+
+# ───────────────── Лабораторная работа №22 ─────────────────
+
+
+def register(request):
+    """
+    Страница регистрации нового пользователя (лр22).
+    После успешной регистрации автоматически входит пользователя
+    (через login()) и создаётся его профиль (через сигнал post_save).
+    """
+    if request.user.is_authenticated:
+        return redirect("shop:account")
+
+    if request.method == "POST":
+        form = UserCreationForm(request.POST)
+        email = request.POST.get("email", "").strip()
+        if form.is_valid():
+            user = form.save(commit=False)
+            if email:
+                user.email = email
+            user.save()
+            login(request, user)
+            messages.success(request, f"Добро пожаловать, {user.username}! Регистрация прошла успешно.")
+            return redirect("shop:account")
+    else:
+        form = UserCreationForm()
+
+    return render(request, "registration/register.html", {"form": form})
+
+
+@login_required
+def account_view(request):
+    """
+    Личный кабинет пользователя (лр22).
+    Отображает профиль, роль и историю заказов.
+    """
+    profile, _ = Profile.objects.get_or_create(user=request.user)
+    orders = Order.objects.filter(user=request.user).order_by("-created_at").prefetch_related("items__product")
+    categories = Category.objects.all()
+
+    context = {
+        "profile": profile,
+        "orders": orders,
+        "categories": categories,
+    }
+    return render(request, "shop/account.html", context)
+
+
+@login_required
+@require_POST
+def account_update(request):
+    """
+    Обновление профиля пользователя через HTML-форму (лр22).
+    Меняет поля Profile и email пользователя.
+    """
+    profile, _ = Profile.objects.get_or_create(user=request.user)
+
+    profile.full_name = request.POST.get("full_name", "").strip()
+    profile.phone = request.POST.get("phone", "").strip()
+    profile.address = request.POST.get("address", "").strip()
+    profile.experience_level = request.POST.get("experience_level", Profile.EXPERIENCE_BEGINNER)
+
+    favorite_cat_id = request.POST.get("favorite_category")
+    if favorite_cat_id:
+        try:
+            profile.favorite_category = Category.objects.get(pk=favorite_cat_id)
+        except Category.DoesNotExist:
+            profile.favorite_category = None
+    else:
+        profile.favorite_category = None
+
+    profile.save()
+
+    email = request.POST.get("email", "").strip()
+    if email:
+        request.user.email = email
+        request.user.save(update_fields=["email"])
+
+    messages.success(request, "Профиль успешно обновлён.")
+    return redirect("shop:account")
+
+
+@login_required
+def order_detail_view(request, pk):
+    """
+    Детальная страница заказа из личного кабинета (лр22).
+    Покупатель видит только свои заказы; администратор видит любой.
+    """
+    if request.user.is_staff:
+        order = get_object_or_404(Order.objects.prefetch_related("items__product"), pk=pk)
+    else:
+        order = get_object_or_404(
+            Order.objects.prefetch_related("items__product"),
+            pk=pk,
+            user=request.user,
+        )
+    return render(request, "shop/order_detail.html", {"order": order})

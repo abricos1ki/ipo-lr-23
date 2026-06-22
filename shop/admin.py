@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Cart, CartItem, Category, Manufacturer, Order, OrderItem, Product
+from .models import Cart, CartItem, Category, Manufacturer, Order, OrderItem, Product, Profile
 
 
 @admin.register(Category)
@@ -65,3 +65,14 @@ class OrderAdmin(admin.ModelAdmin):
 class OrderItemAdmin(admin.ModelAdmin):
     list_display = ("id", "order", "product", "quantity", "price")
     list_filter = ("order",)
+
+
+@admin.register(Profile)
+class ProfileAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "full_name", "phone", "experience_level", "is_admin_role")
+    list_filter = ("experience_level",)
+    search_fields = ("user__username", "full_name", "phone")
+
+    @admin.display(boolean=True, description="Администратор")
+    def is_admin_role(self, obj):
+        return obj.is_admin_role
