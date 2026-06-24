@@ -443,6 +443,121 @@ Bootstrap-страница с двумя блоками:
 
 ---
 
+## Лабораторная работа №23. Деплой Django-приложения на Railway
+
+Проект подготовлен к деплою на облачную платформу Railway: продакшн-
+настройки `settings.py`, `Procfile` для gunicorn, WhiteNoise для статики,
+PostgreSQL через `dj-database-url`.
+
+### Добавленные зависимости (requirements.txt)
+
+| Библиотека | Назначение |
+|---|---|
+| `gunicorn` | WSGI-сервер для продакшна вместо `runserver` |
+| `whitenoise` | Раздача CSS/JS/изображений без отдельного Nginx |
+| `psycopg2-binary` | Драйвер для подключения к PostgreSQL |
+| `dj-database-url` | Парсинг `DATABASE_URL` в настройки Django |
+| `python-dotenv` | Загрузка `.env` при локальной разработке |
+
+### Ключевые изменения settings.py
+
+**SECRET_KEY, DEBUG, ALLOWED_HOSTS** — читаются из переменных окружения:
+
+```python
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-dev-only-...")
+DEBUG = os.environ.get("DJANGO_DEBUG", "True") == "True"
+```
+
+**ALLOWED_HOSTS и CSRF_TRUSTED_ORIGINS** — автоматически включают домен Railway через `RAILWAY_PUBLIC_DOMAIN` (устанавливается платформой автоматически).
+
+**База данных** — при наличии `DATABASE_URL` (Railway + PostgreSQL) переключается на PostgreSQL, иначе SQLite (локальная разработка):
+
+```python
+if os.environ.get("DATABASE_URL"):
+    DATABASES = {"default": dj_database_url.config(default=..., conn_max_age=600)}
+else:
+    DATABASES = {"default": {"ENGINE": "sqlite3", "NAME": BASE_DIR / "db.sqlite3"}}
+```
+
+**WhiteNoise** — добавлен в `MIDDLEWARE` сразу после `SecurityMiddleware`; `STORAGES["staticfiles"]` переключён на `CompressedManifestStaticFilesStorage` (gzip + хэши имён файлов для cache-busting).
+
+**Продакшн-безопасность** (только при `DEBUG=False`):
+`SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE`, `SECURE_SSL_REDIRECT`, `SECURE_HSTS_SECONDS=31536000` — на localhost эти параметры `False` и не ломают разработку.
+
+**`load_dotenv()`** — при локальной разработке загружает `.env` из корня проекта; на Railway переменные задаются в интерфейсе платформы и `load_dotenv()` их не перезаписывает.
+
+### Procfile
+
+```
+web: gunicorn yoga_shop.wsgi:application
+```
+
+Railway читает `Procfile` и запускает эту команду при старте контейнера.
+
+---
+
+### Пошаговая инструкция деплоя на Railway
+
+#### Шаг 1 — Подготовка репозитория на GitHub
+
+```bash
+git add -A
+git commit -m "лр23: подготовка к деплою на Railway"
+git push origin main
+```
+
+#### Шаг 2 — Создание проекта на Railway
+
+1. Зайти на [railway.com](https://railway.com) → **New Project**
+2. Выбрать **Deploy from GitHub repo** → выбрать репозиторий
+3. Railway автоматически определит Python и запустит сборку
+
+#### Шаг 3 — Добавление PostgreSQL
+
+В интерфейсе проекта Railway:
+1. **+ New** → **Database** → **Add PostgreSQL**
+2. Перейти в сервис приложения → вкладка **Variables**
+3. Убедиться, что `DATABASE_URL` появилась в списке (Railway добавляет её автоматически)
+
+#### Шаг 4 — Настройка переменных окружения
+
+В сервисе приложения → вкладка **Variables** → добавить:
+
+| Переменная | Значение |
+|---|---|
+| `DJANGO_SECRET_KEY` | Сгенерировать: `python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"` |
+| `DJANGO_DEBUG` | `False` |
+| `ALLOWED_HOSTS` | `127.0.0.1,localhost` (Railway-домен добавляется автоматически) |
+| `EMAIL_HOST_USER` | Опционально: ваш логин Yandex-почты |
+| `EMAIL_HOST_PASSWORD` | Опционально: пароль приложения Яндекс ID |
+
+> `RAILWAY_PUBLIC_DOMAIN` Railway устанавливает сам — трогать не нужно.
+
+#### Шаг 5 — Применение миграций
+
+В Railway → сервис приложения → вкладка **Deploy** → **Custom Start Command** (или через **Settings → Deploy**):
+
+```bash
+python manage.py migrate && python manage.py collectstatic --no-input && gunicorn yoga_shop.wsgi:application
+```
+
+Или в Railway Shell (вкладка **Terminal**):
+
+```bash
+python manage.py migrate
+python manage.py createsuperuser
+```
+
+#### Шаг 6 — Проверка деплоя
+
+1. Открыть публичный URL вида `https://your-project.up.railway.app`
+2. Убедиться, что сайт загружается со стилями (WhiteNoise)
+3. Зарегистрироваться → войти → проверить личный кабинет
+4. Проверить полный сценарий: каталог → корзина → оформление заказа
+5. Проверить права: покупатель не может создать товар (403), администратор — может
+
+---
+
 ## Структура проекта
 
 ```
@@ -450,8 +565,9 @@ Bootstrap-страница с двумя блоками:
 ├── manage.py
 ├── requirements.txt
 ├── README.md
+├── Procfile                    # команда запуска для Railway (лр23)
 ├── .gitignore
-├── .env.example                # пример переменных окружения для email (лр19)
+├── .env.example                # шаблон переменных окружения (лр19/23)
 ├── static/                     # статические файлы проекта (лр21)
 │   ├── css/
 │   │   └── style.css
@@ -578,9 +694,15 @@ Bootstrap-страница с двумя блоками:
 - Python 3
 - Django 5.1
 - Django REST Framework (REST API)
-- Pillow (для работы с изображениями товаров)
-- openpyxl (генерация чека в формате Excel)
-- SQLite
+- Bootstrap 5 (клиентский интерфейс)
+- Pillow (изображения товаров)
+- openpyxl (генерация чека в Excel)
+- gunicorn (WSGI-сервер для продакшна)
+- WhiteNoise (раздача статики)
+- PostgreSQL + psycopg2-binary (БД в продакшне)
+- dj-database-url (парсинг DATABASE_URL)
+- python-dotenv (локальные переменные окружения)
+- SQLite (БД при локальной разработке)
 
 ## Автор
 

@@ -1,4 +1,16 @@
+# Основной фреймворк
 Django>=5.1,<5.2
+
+# Медиа и документы
 Pillow>=10.0
 openpyxl>=3.1
+
+# REST API
 djangorestframework>=3.15
+
+# Деплой на Railway (лабораторная работа №23)
+gunicorn>=21.0           # WSGI-сервер для продакшна вместо runserver
+whitenoise>=6.7          # раздача статики без Nginx
+psycopg2-binary>=2.9     # драйвер PostgreSQL
+dj-database-url>=2.1     # парсинг DATABASE_URL → настройки Django
+python-dotenv>=1.0       # загрузка .env при локальной разработке
